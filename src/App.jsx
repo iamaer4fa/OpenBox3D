@@ -13,6 +13,7 @@ import { exportPDF } from './export/pdf.js';
 import { asset } from './asset.js';
 import { loadPresetBox } from './preset/presetBox.js';
 import { chooseProjectFile, downloadProject, projectStateOf } from './projects/projects.js';
+import { Translate, translateText, useI18n } from './i18n.jsx';
 
 const REPO_URL = 'https://github.com/yuyou-dev/OpenBox3D';
 
@@ -26,6 +27,7 @@ function GithubMark({ size = 15, color = '#e8dfcc' }) {
 }
 
 export function App() {
+  const { locale, setLocale } = useI18n();
   const s = useStore();
   const [iconOk, setIconOk] = useState(true);
   const m = store.mat();
@@ -36,26 +38,26 @@ export function App() {
   const creaseSegs = creaseSegsOf(g);
   const warnN = s.layers.reduce((a, l) => a + warnsOf(l, creaseSegs, g.sbb).length, 0);
   const okAll = warnN === 0;
-  const tabs = [['structure', '结构'], ['design', '设计'], ['three', '3D'], ['output', '输出']];
+  const tabs = [['structure', locale === 'en' ? 'Structure' : '结构'], ['design', locale === 'en' ? 'Design' : '设计'], ['three', '3D'], ['output', locale === 'en' ? 'Output' : '输出']];
 
   const importProject = async () => {
     try {
       const doc = await chooseProjectFile();
       if (!doc) return;
       store.reset(await projectStateOf(doc, 'design'));
-    } catch (e) { window.alert(e.message); }
+    } catch (e) { window.alert(locale === 'en' ? translateText(e.message, locale) : e.message); }
   };
   const exportProject = () => {
-    const stamp = new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+    const stamp = new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'zh-CN', { month: '2-digit', day: '2-digit' });
     downloadProject(store.get(), { name: tplName + ' ' + s.L + '×' + s.W + '×' + s.H + ' ' + stamp });
   };
   const resetPreset = async () => {
-    if (!window.confirm('重置为示例盒？当前未导出的修改将丢失。')) return;
+    if (!window.confirm(locale === 'en' ? 'Reset to the sample box? Any changes not exported will be lost.' : '重置为示例盒？当前未导出的修改将丢失。')) return;
     store.reset(await loadPresetBox());
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f5f1e8', fontSize: 13 }}>
+    <Translate><div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f5f1e8', fontSize: 13 }}>
       <div style={{ height: 48, flex: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', background: '#211d18', color: '#f5f1e8', whiteSpace: 'nowrap', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           {iconOk
@@ -71,10 +73,14 @@ export function App() {
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        <div title={(okAll ? '结构校验通过' : '设计图层警示 ' + warnN + ' 条') + ' · 切线 ' + g.cutN + ' · 压痕 ' + g.creaseN}
+        <select aria-label="Language" value={locale} onChange={e => setLocale(e.target.value)} style={{ padding: '6px 8px', borderRadius: 6, border: '1px solid #6a6151', background: '#211d18', color: '#e8dfcc', fontSize: 12 }}>
+          <option value="zh">简体中文</option>
+          <option value="en">English</option>
+        </select>
+        <div title={locale === 'en' ? (okAll ? 'Structure validation passed' : 'Design warnings: ' + warnN) + ' · Cut: ' + g.cutN + ' · Crease: ' + g.creaseN : (okAll ? '结构校验通过' : '设计图层警示 ' + warnN + ' 条') + ' · 切线 ' + g.cutN + ' · 压痕 ' + g.creaseN}
           style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: okAll ? '#8fc79e' : '#f0b070', whiteSpace: 'nowrap', flex: 'none', minWidth: 0, overflow: 'hidden' }}>
           <div style={{ width: 7, height: 7, borderRadius: 99, background: okAll ? '#3f9e5f' : '#e08030', flex: 'none' }} />
-          {okAll ? '校验通过' : '警示 ' + warnN}
+          {okAll ? (locale === 'en' ? 'Validation passed' : '校验通过') : (locale === 'en' ? 'Warnings ' : '警示 ') + warnN}
         </div>
         <button onClick={importProject} style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #6a6151', cursor: 'pointer', fontSize: 12, background: 'transparent', color: '#e8dfcc', whiteSpace: 'nowrap' }}>导入工程</button>
         <button onClick={exportProject} style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #6a6151', cursor: 'pointer', fontSize: 12, background: 'transparent', color: '#e8dfcc', whiteSpace: 'nowrap' }}>导出工程</button>
@@ -92,12 +98,12 @@ export function App() {
 
       <div style={{ height: 26, flex: 'none', display: 'flex', alignItems: 'center', gap: 12, padding: '0 12px', background: '#efe9dc', borderTop: '1px solid #ded5c4', fontSize: 11, color: '#6d6557', fontFamily: "'JetBrains Mono',monospace", whiteSpace: 'nowrap', overflow: 'hidden', lineHeight: '26px' }}>
         <span>{tplName} · {m.name} t={m.t}</span>
-        <span>展开 {fmt(sw)}×{fmt(sh)} mm</span>
-        <span>出血 {s.bleed} mm</span>
+        <span>{locale === 'en' ? 'Flat' : '展开'} {fmt(sw)}×{fmt(sh)} mm</span>
+        <span>{locale === 'en' ? 'Bleed' : '出血'} {s.bleed} mm</span>
         <div style={{ flex: 1 }} />
-        <span>缩放 {Math.round((s.k || 1) * 100)}%</span>
-        <span>单位 mm</span>
+        <span>{locale === 'en' ? 'Zoom' : '缩放'} {Math.round((s.k || 1) * 100)}%</span>
+        <span>{locale === 'en' ? 'Units' : '单位'} mm</span>
       </div>
-    </div>
+    </div></Translate>
   );
 }

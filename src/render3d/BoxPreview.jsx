@@ -14,7 +14,7 @@ export function boxPreviewContextOf(s, m) {
   return { g, bakeKey, sbbKey: g.sbb.join(',') };
 }
 
-export function BoxPreview({ s, m, context, engineRef, fitFold = false, shadowSamples = 5, lightEdit = '0', selLight = '', onLightSelect, onLightEdit }) {
+export function BoxPreview({ s, m, context, engineRef, fitFold = false, shadowSamples = 5, lightEdit = '0', selLight = '', onLightSelect, onLightEdit, locale = 'zh' }) {
   const ctx = context || boxPreviewContextOf(s, m);
   return <BoxCanvas
     l={s.L} w={s.W} h={s.H} t={m.t} tpl={s.tpl} fold={s.fold} paper={s.paper3d} film={s.film3d} glue={s.glue} paperTint={s.paperTint3d}
@@ -37,5 +37,5 @@ export function BoxPreview({ s, m, context, engineRef, fitFold = false, shadowSa
     lightEdit={lightEdit} selLight={selLight} onLightSelect={onLightSelect} onLightEdit={onLightEdit}
     fitFold={fitFold ? '1' : '0'}
     embDepth={'' + s.embDepth} embSharpness={s.embSharpness3d} embDir={s.embDir} embBoost={s.embBoost ? '1' : '0'}
-    engineRef={engineRef} />;
+    locale={locale} engineRef={engineRef} />;
 }

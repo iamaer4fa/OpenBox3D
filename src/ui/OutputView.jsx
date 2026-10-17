@@ -8,8 +8,10 @@ import { embDirOf } from '../design/emboss.js';
 import { exportPDF } from '../export/pdf.js';
 import { exportSeparations } from '../export/separations.js';
 import { ST, KV, btnSt } from './widgets.jsx';
+import { Translate, translateText, useI18n } from '../i18n.jsx';
 
 export function OutputView() {
+  const { locale } = useI18n();
   const s = useStore();
   const m = store.mat();
   const g = geomOf(s, m.t);
@@ -24,28 +26,31 @@ export function OutputView() {
   const checksArr = [
     { label: '页面按毫米 1:1 生成，并写入 TrimBox / BleedBox', dot: '#3f9e5f' },
     { label: 'CutContour / Crease 以专色叠印输出', dot: '#3f9e5f' },
-    { label: '出血 ' + s.bleed + ' mm ' + (s.bleed >= m.bleed ? '≥' : '<') + ' 材质建议 ' + m.bleed + ' mm（' + m.note + '）', dot: s.bleed >= m.bleed ? '#3f9e5f' : '#d05a2a' },
-    { label: missingImages.length ? '有 ' + missingImages.length + ' 个图片资源尚未加载，专业净稿/工艺分版将阻止导出' : '图片资源均已加载', dot: missingImages.length ? '#d05a2a' : '#3f9e5f' },
-    { label: lowDpiImages.length ? '有 ' + lowDpiImages.length + ' 个图片图层低于 300 dpi' : loadedImages.length ? '已加载图片均达到 300 dpi' : '暂无已加载图片可检查 DPI', dot: lowDpiImages.length ? '#d05a2a' : loadedImages.length ? '#3f9e5f' : '#9a8f7e' },
+    { label: locale === 'en' ? `Bleed ${s.bleed} mm ${s.bleed >= m.bleed ? '≥' : '<'} recommended ${translateText(m.note, locale)} bleed ${m.bleed} mm` : '出血 ' + s.bleed + ' mm ' + (s.bleed >= m.bleed ? '≥' : '<') + ' 材质建议 ' + m.bleed + ' mm（' + m.note + '）', dot: s.bleed >= m.bleed ? '#3f9e5f' : '#d05a2a' },
+    { label: missingImages.length ? locale === 'en' ? `${missingImages.length} image asset(s) not loaded; professional clean and finish-separation exports are blocked` : '有 ' + missingImages.length + ' 个图片资源尚未加载，专业净稿/工艺分版将阻止导出' : '图片资源均已加载', dot: missingImages.length ? '#d05a2a' : '#3f9e5f' },
+    { label: lowDpiImages.length ? locale === 'en' ? `${lowDpiImages.length} image layer(s) below 300 dpi` : '有 ' + lowDpiImages.length + ' 个图片图层低于 300 dpi' : loadedImages.length ? '已加载图片均达到 300 dpi' : '暂无已加载图片可检查 DPI', dot: lowDpiImages.length ? '#d05a2a' : loadedImages.length ? '#3f9e5f' : '#9a8f7e' },
     { label: '轮廓闭合、自交、孤立线段与最小刀距：本版本未自动检测，交付前须由印厂/RIP 预检', dot: '#9a8f7e' }
   ];
-  const designWarnRows = s.layers.flatMap(l => warnsOf(l, creaseSegs, g.sbb).map(w => ({ label: '图层「' + layerNameOf(l) + '」：' + w, dot: '#d05a2a' })));
+  const designWarnRows = s.layers.flatMap(l => warnsOf(l, creaseSegs, g.sbb).map(w => ({
+    label: locale === 'en' ? `Layer "${layerNameOf(l, locale)}": ${w.startsWith('分辨率不足：') ? `Resolution too low: ${w.slice('分辨率不足：'.length)}` : translateText(w, locale)}` : '图层「' + layerNameOf(l) + '」：' + w,
+    dot: '#d05a2a'
+  })));
   const outChecks = checksArr.concat(designWarnRows);
   const outSummary = [
     { k: '盒型', v: tplName }, { k: '内尺寸', v: s.L + ' × ' + s.W + ' × ' + s.H + ' mm' },
-    { k: '材质', v: m.name + ' · t=' + m.t }, { k: '出血', v: s.bleed + ' mm' },
+    { k: '材质', v: translateText(m.name, locale) + ' · t=' + m.t }, { k: '出血', v: s.bleed + ' mm' },
     { k: '展开尺寸', v: fmt(sw) + ' × ' + fmt(sh) + ' mm' },
-    { k: '刀线', v: g.cutN + ' 切 · ' + g.creaseN + ' 压 · 线型调整 ' + typeOvrCount },
-    { k: '设计图层', v: s.layers.length + ' 层' }
+    { k: '刀线', v: locale === 'en' ? `${g.cutN} cuts · ${g.creaseN} creases · ${typeOvrCount} line type edits` : g.cutN + ' 切 · ' + g.creaseN + ' 压 · 线型调整 ' + typeOvrCount },
+    { k: '设计图层', v: locale === 'en' ? `${s.layers.length} layers` : s.layers.length + ' 层' }
   ];
-  const outFins = ['foil', 'silver', 'uv', 'gloss', 'holo'].map(f => ({ k: FIN_NAMES[f] + '版', v: s.layers.filter(l => l.finish === f).map(layerNameOf).join('、') || '—' }))
-    .concat(['up', 'down'].map(dir => ({ k: (dir === 'up' ? '击凸' : '击凹') + '版', v: s.layers.filter(l => l.finish === 'emboss' && embDirOf(l, s.embDir) === dir).map(layerNameOf).join('、') || '—' })))
-    .concat([{ k: '四色印刷', v: s.layers.filter(l => l.finish === 'none').length + ' 层' }]);
+  const outFins = ['foil', 'silver', 'uv', 'gloss', 'holo'].map(f => ({ k: locale === 'en' ? `${translateText(FIN_NAMES[f], locale)} Plate` : FIN_NAMES[f] + '版', v: s.layers.filter(l => l.finish === f).map(l => layerNameOf(l, locale)).join(locale === 'en' ? ', ' : '、') || '—' }))
+    .concat(['up', 'down'].map(dir => ({ k: locale === 'en' ? `${dir === 'up' ? 'Emboss' : 'Deboss'} Plate` : (dir === 'up' ? '击凸' : '击凹') + '版', v: s.layers.filter(l => l.finish === 'emboss' && embDirOf(l, s.embDir) === dir).map(l => layerNameOf(l, locale)).join(locale === 'en' ? ', ' : '、') || '—' })))
+    .concat([{ k: '四色印刷', v: locale === 'en' ? `${s.layers.filter(l => l.finish === 'none').length} layers` : s.layers.filter(l => l.finish === 'none').length + ' 层' }]);
   const card = { background: '#fdfcf7', border: '1px solid #ded5c4', borderRadius: 10, padding: '18px 20px' };
-  const runExport = async fn => { try { await fn(); } catch (e) { alert(e.message || String(e)); } };
+  const runExport = async fn => { try { await fn(); } catch (e) { alert(locale === 'en' ? translateText(e.message || String(e), locale) : e.message || String(e)); } };
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#f0ebe0' }}>
+    <Translate><div style={{ flex: 1, overflowY: 'auto', background: '#f0ebe0' }}>
       <div style={{ maxWidth: 900, margin: '24px auto', padding: '0 20px 30px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
         <div style={card}><ST>项目摘要</ST>{outSummary.map(r => (
           <div key={r.k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', fontSize: 12.5, borderBottom: '1px dashed #eee7d8' }}>
@@ -83,6 +88,6 @@ export function OutputView() {
           <div style={{ marginTop: 12, fontSize: 11, lineHeight: 1.65, color: '#8a8071' }}>专业净稿：仅保留普通四色图层，未设计区域为纯白，不写页内说明；烫金/UV/亮面/压纹/镭射请另导工艺分版。生产稿保留既有工艺预览与可视说明以兼容旧流程。两种 CMYK 均为 300dpi 朴素转换、无 ICC，不宣称 PDF/X，色彩以印厂打样为准。工艺分版：300dpi DeviceGray 无损 PDF（黑 = 工艺覆盖区，灰虚线 = 刀线参考）。镭射（幻彩）随角度变色无法以 CMYK 表达，数据层只交付覆盖区域：局部用 HOLO-FOIL 镭射版烫印，满版则属镭射膜/镭射卡材料选择；彩色镭射 = 换彩色镭射箔或镭射上叠印半透明油墨（3D 预览对应「镭射底色」参数），分版数据不变。</div>
         </div>
       </div>
-    </div>
+    </div></Translate>
   );
 }

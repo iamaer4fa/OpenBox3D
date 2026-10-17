@@ -4,6 +4,7 @@ import { store, useStore } from '../state/store.js';
 import { asset } from '../asset.js';
 import { bboxOf } from '../design/layers.js';
 import { bboxOfPts, containerAt, containerOfLayer } from '../design/containers.js';
+import { Translate } from '../i18n.jsx';
 
 export function SheetCanvas({ view, g, children, onImageDrop }) {
   const s = useStore();
@@ -288,7 +289,7 @@ export function SheetCanvas({ view, g, children, onImageDrop }) {
 
   const zoomPct = Math.round(k * 100) + '%';
   return (
-    <div ref={elRef} aria-label={view === 'design' ? '设计画布，可拖拽图片到盒面' : undefined} data-testid={view === 'design' ? 'design-drop-canvas' : undefined}
+    <Translate><div ref={elRef} aria-label={view === 'design' ? '设计画布，可拖拽图片到盒面' : undefined} data-testid={view === 'design' ? 'design-drop-canvas' : undefined}
       style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#e7e0d0', userSelect: 'none', touchAction: 'none' }}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
       onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
@@ -365,6 +366,6 @@ export function SheetCanvas({ view, g, children, onImageDrop }) {
         <button onClick={() => { userMoved.current = false; fit(); }} title="适配视图" style={{ width: 26, height: 26, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#5c554a', borderRadius: 4 }}>⤢</button>
       </div>
       {children}
-    </div>
+    </div></Translate>
   );
 }

@@ -9,8 +9,10 @@ import { embDirOf } from '../design/emboss.js';
 import { uploadImage, imageFilesOf, readImageFile, imageLayerAt } from '../design/images.js';
 import { SheetCanvas } from './SheetCanvas.jsx';
 import { ST, Block, Note, inputSt, selectSt, btnSt } from './widgets.jsx';
+import { Translate, useI18n } from '../i18n.jsx';
 
 export function DesignView() {
+  const { locale } = useI18n();
   const s = useStore();
   const m = store.mat();
   const g = geomOf(s, m.t);
@@ -19,6 +21,9 @@ export function DesignView() {
   const upd = patch => store.set(st => ({ layers: st.layers.map(l => l.id === st.sel ? { ...l, ...patch, heroPreset: undefined } : l) }));
   const sel = s.layers.find(l => l.id === s.sel);
   const selWarns = sel ? warnsOf(sel, creaseSegs, g.sbb) : [];
+  const warningText = warning => locale === 'en' && warning.startsWith('分辨率不足：')
+    ? `Resolution too low: ${warning.slice('分辨率不足：'.length)}`
+    : warning;
   const [histPastN, histFutureN] = store.histDepth(); // 撤销/重做栈深度（随 store 变更自动刷新）
 
   // 键盘：⌘Z 撤销 · ⌘⇧Z/⌃Y 重做 · 方向键微移 1mm（Shift=5mm）· Delete 删除 · ⌘D 复制 · Esc 取消选中
@@ -83,10 +88,10 @@ export function DesignView() {
         const added = assets.map((asset, i) => imageLayerAt(st.seq + i, asset, panel, [point[0] + i * 2, point[1] + i * 2]));
         return { layers: st.layers.concat(added), seq: st.seq + added.length, sel: added[added.length - 1].id };
       });
-    } catch (_) { alert('图片读取失败，请使用 PNG、JPG 或 WebP 文件。'); }
+    } catch (_) { alert(locale === 'en' ? 'Could not read the image. Use a PNG, JPG, or WebP file.' : '图片读取失败，请使用 PNG、JPG 或 WebP 文件。'); }
   };
 
-  return (<>
+  return (<Translate>
     <div style={{ width: 246, flex: 'none', background: '#faf7f0', borderRight: '1px solid #ded5c4', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
       <Block>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 }}>
@@ -97,21 +102,21 @@ export function DesignView() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-          <button onClick={() => addL((id, hp) => ({ id, kind: 'text', x: hp.cx, y: hp.cy, content: '双击右栏编辑文字', font: 'Noto Sans SC', size: 6, weight: 400, color: '#211d18', finish: 'none', visible: true }))} style={{ ...btnSt, flex: 1, fontSize: 11.5 }}>+ 文字</button>
+          <button onClick={() => addL((id, hp) => ({ id, kind: 'text', x: hp.cx, y: hp.cy, content: locale === 'en' ? 'Double-click to edit text in the right panel' : '双击右栏编辑文字', font: 'Noto Sans SC', size: 6, weight: 400, color: '#211d18', finish: 'none', visible: true }))} style={{ ...btnSt, flex: 1, fontSize: 11.5 }}>+ 文字</button>
           <button onClick={() => uploadImage(addL)} style={{ ...btnSt, flex: 1, fontSize: 11.5 }}>+ 图片</button>
-          <button onClick={() => addL((id, hp) => { const w = Math.min(30, hp.safeBox[2] - hp.safeBox[0]), h = Math.min(8, hp.safeBox[3] - hp.safeBox[1]); return { id, kind: 'shape', x: hp.cx - w / 2, y: hp.cy - h / 2, w, h, content: '色块', color: '#9a5b1f', finish: 'none', visible: true }; })} style={{ ...btnSt, flex: 1, fontSize: 11.5 }}>+ 色块</button>
+          <button onClick={() => addL((id, hp) => { const w = Math.min(30, hp.safeBox[2] - hp.safeBox[0]), h = Math.min(8, hp.safeBox[3] - hp.safeBox[1]); return { id, kind: 'shape', x: hp.cx - w / 2, y: hp.cy - h / 2, w, h, content: locale === 'en' ? 'Color swatch' : '色块', color: '#9a5b1f', finish: 'none', visible: true }; })} style={{ ...btnSt, flex: 1, fontSize: 11.5 }}>+ 色块</button>
         </div>
         <div style={{ display: 'grid', gap: 5 }}>
           {s.layers.slice().reverse().map(l => {
             const warn = warnsOf(l, creaseSegs, g.sbb).length > 0;
             return (
               <div key={l.id} data-layer-id={l.id} onClick={() => store.set({ sel: l.id })}
-                title={layerNameOf(l)}
+                title={layerNameOf(l, locale)}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden', padding: '7px 9px', borderRadius: 6, cursor: 'pointer', border: '1px solid ' + (s.sel === l.id ? '#9a5b1f' : '#e7e0d4'), background: s.sel === l.id ? '#f7efe2' : '#fff' }}>
                 <span onClick={e => { e.stopPropagation(); store.set(st => ({ layers: st.layers.map(x => x.id === l.id ? { ...x, visible: !x.visible } : x) })); }} title="显示/隐藏" style={{ width: 16, flex: 'none', textAlign: 'center', fontSize: 11, cursor: 'pointer', opacity: l.visible ? 1 : 0.25 }}>◉</span>
                 <span onClick={e => { e.stopPropagation(); store.set(st => ({ layers: st.layers.map(x => x.id === l.id ? { ...x, locked: !x.locked } : x) })); }} title="锁定/解锁" style={{ width: 15, flex: 'none', textAlign: 'center', fontSize: 10, cursor: 'pointer', color: l.locked ? '#9a5b1f' : '#cfc4ab' }}>{l.locked ? '锁' : '·'}</span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9.5, fontWeight: 700, color: '#8a8071', border: '1px solid #ded5c4', borderRadius: 3, padding: '1px 4px', flex: 'none' }}>{l.kind === 'text' ? 'T' : l.kind === 'image' ? '图' : '块'}</span>
-                <span data-layer-name={layerNameOf(l)} style={{ flex: 1, minWidth: 0, fontSize: 12, color: '#211d18', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{layerNameOf(l)}</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9.5, fontWeight: 700, color: '#8a8071', border: '1px solid #ded5c4', borderRadius: 3, padding: '1px 4px', flex: 'none' }}>{l.kind === 'text' ? 'T' : l.kind === 'image' ? (locale === 'en' ? 'IMG' : '图') : (locale === 'en' ? 'SHAPE' : '块')}</span>
+                <span data-layer-name={layerNameOf(l, locale)} style={{ flex: 1, minWidth: 0, fontSize: 12, color: '#211d18', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{layerNameOf(l, locale)}</span>
                 <span style={{ fontSize: 10, color: '#9a5b1f', flex: 'none' }}>{l.finish === 'emboss' ? '压纹' + (embDirOf(l, s.embDir) === 'up' ? '↑' : '↓') : (FIN[l.finish] || '')}</span>
                 {warn && <span style={{ width: 7, height: 7, borderRadius: 99, background: '#d05a2a', flex: 'none' }} />}
               </div>
@@ -120,7 +125,7 @@ export function DesignView() {
         </div>
       </Block>
       <div style={{ padding: 14 }}>
-        <Note><b style={{ color: '#211d18' }}>分层规则</b>　拖动图层移动位置；跨压痕线、越出安全区、低于 300dpi 时右栏红点警示。设为「烫金/局部UV/亮面/压纹」的图层会进入对应的独立工艺通道。</Note>
+        <Note><b style={{ color: '#211d18' }}>{locale === 'en' ? 'Layering Tips' : '分层规则'}</b>　{locale === 'en' ? 'Drag layers to reposition them. A warning dot appears for artwork crossing creases, extending beyond the safe area, or below 300 dpi. Layers assigned foil, spot UV, gloss, or emboss are included in their respective finish separations.' : '拖动图层移动位置；跨压痕线、越出安全区、低于 300dpi 时右栏红点警示。设为「烫金/局部UV/亮面/压纹」的图层会进入对应的独立工艺通道。'}</Note>
       </div>
     </div>
 
@@ -186,7 +191,7 @@ export function DesignView() {
             </div>
             {sel.kind === 'image' && sel.imgSrc && (
               <div style={{ marginTop: 8, fontSize: 10.5, color: dpiOf(sel) >= 300 ? '#8a8071' : '#c0492b', fontFamily: "'JetBrains Mono',monospace", display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>{sel.imgW}×{sel.imgH}px · {dpiOf(sel)} dpi{dpiOf(sel) < 300 ? ' · 不足 300' : ''}</span>
+                <span>{sel.imgW}×{sel.imgH}px · {dpiOf(sel)} dpi{dpiOf(sel) < 300 ? (locale === 'en' ? ' · Below 300' : ' · 不足 300') : ''}</span>
                 <span onClick={() => uploadImage(addL, sel.id)} style={{ color: '#9a5b1f', cursor: 'pointer', textDecoration: 'underline' }}>替换</span>
                 <span onClick={() => store.set(st => ({ uiCrop: !st.uiCrop }))} style={{ color: s.uiCrop ? '#fff' : '#9a5b1f', background: s.uiCrop ? '#9a5b1f' : 'transparent', borderRadius: 3, padding: '1px 5px', cursor: 'pointer', textDecoration: s.uiCrop ? 'none' : 'underline' }}>{s.uiCrop ? '裁剪中✓' : '裁剪'}</span>
               </div>
@@ -231,12 +236,12 @@ export function DesignView() {
             <ST style={{ color: '#c0492b' }}>警示</ST>
             {selWarns.map(wn => (
               <div key={wn} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '4px 0', fontSize: 12, color: '#3d3830', lineHeight: 1.5 }}>
-                <span style={{ width: 7, height: 7, borderRadius: 99, background: '#d05a2a', flex: 'none', transform: 'translateY(-1px)' }} />{wn}
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: '#d05a2a', flex: 'none', transform: 'translateY(-1px)' }} />{warningText(wn)}
               </div>
             ))}
           </div>
         )}
       </>)}
     </div>
-  </>);
+  </Translate>);
 }

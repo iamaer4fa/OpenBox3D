@@ -104,7 +104,7 @@ export function Range({ label, value, min, max, step = 0.01, suffix = '', onChan
     <div style={{ fontSize: 10.5, color: '#8a8071', marginBottom: 3 }}>{label}</div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
       <input aria-label={label} type="range" value={value} min={min} max={max} step={step} onInput={e => onChange(+e.currentTarget.value)} style={{ flex: 1, minWidth: 0, accentColor: '#9a5b1f', margin: 0 }} />
-      <input aria-label={label + ' 数值'} inputMode="decimal" value={draft !== null ? draft : Number(value).toFixed(dec)}
+      <input aria-label={label + ' value'} inputMode="decimal" value={draft !== null ? draft : Number(value).toFixed(dec)}
         onChange={e => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={e => { if (e.key === 'Enter') { commit(); e.currentTarget.blur(); } else if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); } }}
         style={{ ...monoSt, width: 46, flex: 'none', padding: '2px 4px', textAlign: 'right', border: '1px solid #d8d0c2', borderRadius: 4, background: '#fff' }} />

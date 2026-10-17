@@ -2,9 +2,9 @@
 export const FIN = { none: '', foil: '烫金', silver: '烫银', uv: 'UV', gloss: '亮面', emboss: '压纹', holo: '镭射' };
 export const FIN_NAMES = { foil: '烫金', silver: '烫银', uv: '局部 UV', gloss: '亮面', emboss: '压纹', holo: '镭射' };
 export const randomImageName = () => '图片·' + Math.random().toString(36).slice(2, 6).toUpperCase();
-export const layerNameOf = l => {
-  if (l && typeof l.name === 'string' && l.name.trim()) return l.name.trim();
-  if (l && l.kind === 'image') return '图片·' + Number(l.id || 0).toString(36).toUpperCase().padStart(4, '0').slice(-4);
+export const layerNameOf = (l, locale = 'zh') => {
+  if (l && typeof l.name === 'string' && l.name.trim() && !(locale === 'en' && l.kind === 'image' && /^图片·[A-Z0-9]{4}$/.test(l.name.trim()))) return l.name.trim();
+  if (l && l.kind === 'image') return (locale === 'en' ? 'Image · ' : '图片·') + Number(l.id || 0).toString(36).toUpperCase().padStart(4, '0').slice(-4);
   return l && l.content || '(空)';
 };
 

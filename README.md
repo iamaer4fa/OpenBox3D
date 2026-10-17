@@ -70,6 +70,8 @@ The site at <https://yuyou-dev.github.io/OpenBox3D/> is built from this repo by 
 
 ## Using the workbench
 
+Choose **English** or **简体中文** from the language menu in the top bar. Your choice is saved in this browser.
+
 The top bar switches between four workspaces:
 
 1. **结构 Structure** — pick a box template, set inner dimensions (L×W×H mm), board stock and bleed; edit dieline nodes and line types (cut/crease) directly.

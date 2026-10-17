@@ -6,6 +6,7 @@ import { geomOf } from '../dieline/geom.js';
 import { reflowLayersToContainers } from '../design/containers.js';
 import { SheetCanvas } from './SheetCanvas.jsx';
 import { ST, Block, Toggle, ToggleRow, NumField, Note, KV, selectSt, btnSt } from './widgets.jsx';
+import { Translate, translateText, useI18n } from '../i18n.jsx';
 
 const setNum = (key, min, max) => e => {
   const v = parseFloat(e.target.value);
@@ -16,6 +17,7 @@ const setNum = (key, min, max) => e => {
 };
 
 export function StructureView() {
+  const { locale } = useI18n();
   const s = useStore();
   const m = store.mat();
   const g = geomOf(s, m.t);
@@ -37,14 +39,22 @@ export function StructureView() {
     { k: '含出血', v: fmt(sw + 2 * s.bleed) + ' × ' + fmt(sh + 2 * s.bleed) },
     { k: '纸厚 t', v: t + ' mm' }
   ].concat(specTpl[s.tpl] || []);
-  const checks = ['外轮廓闭合', '无自交 / 孤立线段', '最小刀距 ≥ 1.5 mm', '压痕两侧均有连接面', '出血 ≥ ' + m.bleed + ' mm（' + m.note + '）'];
-  const compNote = s.tpl === 'rte' || s.tpl === 'ste' ? '当前：W+t · L+t · W+t · L+2t，高度 H+t' : s.tpl === 'mailer' ? '当前：楞厚 t=' + t + '，侧墙 H+t，盖宽 W+3t' : s.tpl === 'cyl' ? '当前：直径 D=L，筒身 24 段卷合，盖为 24 边形' : s.tpl === 'hex' ? '当前：边长 W，六棱筒，盖为正六边形' : '当前：盖/套筒按 +1mm/边 放量';
+  const checks = locale === 'en'
+    ? ['Outer contour is closed', 'No self-intersections / isolated segments', 'Minimum blade clearance ≥ 1.5 mm', 'Creases connect panels on both sides', `Bleed ≥ ${m.bleed} mm (${translateText(m.note, locale)})`]
+    : ['外轮廓闭合', '无自交 / 孤立线段', '最小刀距 ≥ 1.5 mm', '压痕两侧均有连接面', '出血 ≥ ' + m.bleed + ' mm（' + m.note + '）'];
+  const compNote = locale === 'en'
+    ? s.tpl === 'rte' || s.tpl === 'ste' ? 'Current: W+t · L+t · W+t · L+2t, height H+t'
+      : s.tpl === 'mailer' ? `Current: flute thickness t=${t}, side wall H+t, lid width W+3t`
+        : s.tpl === 'cyl' ? 'Current: diameter D=L, 24 tube segments, 24-sided lids'
+          : s.tpl === 'hex' ? 'Current: side length W, hexagonal tube with hexagonal lids'
+            : 'Current: lid/sleeve clearance +1 mm per side'
+    : s.tpl === 'rte' || s.tpl === 'ste' ? '当前：W+t · L+t · W+t · L+2t，高度 H+t' : s.tpl === 'mailer' ? '当前：楞厚 t=' + t + '，侧墙 H+t，盖宽 W+3t' : s.tpl === 'cyl' ? '当前：直径 D=L，筒身 24 段卷合，盖为 24 边形' : s.tpl === 'hex' ? '当前：边长 W，六棱筒，盖为正六边形' : '当前：盖/套筒按 +1mm/边 放量';
   const editOn = s.editMode;
   const typeOvrCount = Object.keys(s.typeOvr).length;
   const selSegOk = editOn && s.selSeg != null && g.segs[s.selSeg];
   const curSegT = selSegOk ? g.segs[s.selSeg].t : '';
 
-  return (<>
+  return (<Translate>
     <div style={{ width: 246, flex: 'none', background: '#faf7f0', borderRight: '1px solid #ded5c4', overflowY: 'auto' }}>
       <Block>
         <ST>盒型库</ST>
@@ -87,7 +97,7 @@ export function StructureView() {
           <Toggle on={s.editMode} onClick={() => store.set(st => ({ editMode: !st.editMode, selSeg: null }))} />
         </div>
         {editOn && (<>
-          <div style={{ fontSize: 11, color: '#8a8071', marginTop: 8, lineHeight: 1.6 }}>点击线段后可切换为切线或压痕。已修改线型 <b style={{ color: '#9a5b1f' }}>{typeOvrCount}</b> 处。</div>
+          <div style={{ fontSize: 11, color: '#8a8071', marginTop: 8, lineHeight: 1.6 }}>{locale === 'en' ? 'Select a segment to switch between cut and crease. Modified line types: ' : '点击线段后可切换为切线或压痕。已修改线型 '}<b style={{ color: '#9a5b1f' }}>{typeOvrCount}</b>{locale === 'en' ? '' : ' 处。'}</div>
           {selSegOk && (
             <div style={{ marginTop: 9, background: '#f0ebe0', border: '1px solid #e2dac9', borderRadius: 6, padding: '9px 11px' }}>
               <div style={{ fontSize: 11, color: '#6d6557', marginBottom: 7 }}>选中线段 · 当前：{curSegT === 'cut' ? '切线' : '压痕'}</div>
@@ -101,7 +111,7 @@ export function StructureView() {
         </>)}
       </Block>
       <div style={{ padding: 14 }}>
-        <Note><b style={{ color: '#211d18' }}>纸厚补偿</b>　制造尺寸 = 内尺寸 + n × t<br />{compNote}</Note>
+        <Note><b style={{ color: '#211d18' }}>{locale === 'en' ? 'Board Thickness Compensation' : '纸厚补偿'}</b>　{locale === 'en' ? 'Manufacturing dimensions = inner dimensions + n × t' : '制造尺寸 = 内尺寸 + n × t'}<br />{compNote}</Note>
       </div>
     </div>
 
@@ -111,8 +121,8 @@ export function StructureView() {
       <Block><ST>制造尺寸（已补偿）</ST>{specRows.map(r => <KV key={r.k} k={r.k} v={r.v} />)}</Block>
       <Block>
         <ST>刀模统计</ST>
-        <KV k="切线" v={fmt(g.cutLen / 1000) + ' m · ' + g.cutN + ' 段'} />
-        <KV k="压痕" v={fmt(g.creaseLen / 1000) + ' m · ' + g.creaseN + ' 段'} />
+        <KV k="切线" v={locale === 'en' ? fmt(g.cutLen / 1000) + ' m · ' + g.cutN + ' segments' : fmt(g.cutLen / 1000) + ' m · ' + g.cutN + ' 段'} />
+        <KV k="压痕" v={locale === 'en' ? fmt(g.creaseLen / 1000) + ' m · ' + g.creaseN + ' segments' : fmt(g.creaseLen / 1000) + ' m · ' + g.creaseN + ' 段'} />
       </Block>
       <Block>
         <ST>显示</ST>
@@ -129,5 +139,5 @@ export function StructureView() {
         ))}
       </div>
     </div>
-  </>);
+  </Translate>);
 }

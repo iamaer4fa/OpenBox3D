@@ -13,6 +13,8 @@ const STUDIO_CONTROL_KEYS = ['environmentIntensity', 'environmentRotation', 'bac
 const FILM_CONTROL_KEYS = ['filmClearcoat', 'filmClearcoatRoughness', 'uvClearcoat', 'uvRoughness'];
 const MATERIAL_CONTROL_KEYS = ['surfaceRoughness', 'filmRoughnessFactor', 'filmSheen', 'foilMetalness', 'iridescence', 'holoSpan', 'embNormalStrength', 'embDisplacementStrength'];
 const cameraTypeOf = v => v === 'orthographic' ? 'orthographic' : 'perspective';
+const VIEW_LABELS_EN = { '正视': 'Front', '侧视': 'Side', '顶视': 'Top', '等轴': 'Isometric', '适配': 'Fit' };
+const MODE_LABELS = { rotate: ['○ 旋转', '○ Rotate'], pan: ['✚ 平移', '✚ Pan'], move: ['▣ 移动盒子', '▣ Move Box'], turn: ['⟳ 转盒', '⟳ Turn Box'] };
 
 export class BoxEngine {
   constructor(container, props = {}) {
@@ -23,9 +25,18 @@ export class BoxEngine {
     this.faceMat = new THREE.MeshPhysicalMaterial({ color: 0xf4f1e8, roughness: 0.5 });
     this.coreMat = new THREE.MeshStandardMaterial({ color: 0xd8cdb2, roughness: 0.92 });
     this.init().catch(e => {
-      if (this.el) this.el.innerHTML = '<div style="padding:20px;color:#a33;font:12px sans-serif">3D 初始化失败: ' + e.message + '</div>';
+      if (this.el) this.el.innerHTML = '<div style="padding:20px;color:#a33;font:12px sans-serif">' + (this.props.locale === 'en' ? '3D initialization failed: ' : '3D 初始化失败: ') + e.message + '</div>';
       console.error(e);
     });
+  }
+  updateLanguage() {
+    const english = this.props.locale === 'en';
+    (this._viewBtns || []).forEach(([button, label]) => { button.textContent = english ? VIEW_LABELS_EN[label] : label; });
+    Object.entries(this._modeBtns || {}).forEach(([mode, button]) => { button.textContent = MODE_LABELS[mode][english ? 1 : 0]; });
+    if (this._turnResetBtn) {
+      this._turnResetBtn.textContent = english ? 'Reset' : '回正';
+      this._turnResetBtn.title = english ? 'Reset box rotation (use after Turn Box mode)' : '盒子旋转归零（转盒模式后用）';
+    }
   }
 
   // 外部驱动：props 全量下发，内部 diff
@@ -34,6 +45,7 @@ export class BoxEngine {
     this.props = { ...props };
     if (!this.ready) return;
     const p = this.props;
+    if (prev.locale !== p.locale) this.updateLanguage();
     if (prev.l !== p.l || prev.w !== p.w || prev.h !== p.h || prev.t !== p.t || prev.tpl !== p.tpl || prev.glue !== p.glue || prev.sbbKey !== p.sbbKey) {
       clearTimeout(this._bt);
       this._bt = setTimeout(() => { if (this._disposed) return; this.build(); this.rebake(); this.applyFold(); this.frame(); }, 150);
@@ -94,12 +106,13 @@ export class BoxEngine {
     // 视角按钮
     const tb = document.createElement('div');
     tb.style.cssText = 'position:absolute;bottom:10px;right:10px;display:flex;gap:4px;z-index:2';
+    this._viewBtns = [];
     const mkBtn = (label, fn) => {
       const b = document.createElement('button'); b.textContent = label;
       b.style.cssText = 'background:rgba(250,247,240,.92);border:1px solid #ded5c4;border-radius:5px;font:12px "Noto Sans SC",sans-serif;color:#5c554a;padding:4px 9px;cursor:pointer;white-space:nowrap';
       b.onmouseenter = () => b.style.background = '#f0e8d8';
       b.onmouseleave = () => b.style.background = 'rgba(250,247,240,.92)';
-      b.onclick = fn; tb.appendChild(b);
+      b.onclick = fn; tb.appendChild(b); this._viewBtns.push([b, label]);
     };
     mkBtn('正视', () => this.setView('front')); mkBtn('侧视', () => this.setView('side'));
     mkBtn('顶视', () => this.setView('top')); mkBtn('等轴', () => this.setView('iso'));
@@ -121,6 +134,7 @@ export class BoxEngine {
     rb.onclick = () => { if (this.props.spin === '1' || !this.boxRoot) return; this.boxRoot.rotation.set(0, 0, 0); };
     this._turnResetBtn = rb; mb.appendChild(rb);
     this.el.appendChild(mb);
+    this.updateLanguage();
     this.syncTurnReset();
     this.setMode('rotate');
     const pick = e => {

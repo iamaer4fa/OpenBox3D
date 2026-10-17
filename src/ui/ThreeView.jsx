@@ -8,8 +8,10 @@ import { STAGES } from '../render3d/stage.js';
 import { PAPER_PRESETS, FILM_PRESETS, paperPreset, filmPreset } from '../render3d/presets.js';
 import { SCENE_PRESETS, scenePreset, rigToStorePatch } from '../render3d/rig.js';
 import { ST, Block, Toggle, ToggleRow, Note, selectSt, btnSt, inputSt, captureThumb, Range, ColorRow } from './widgets.jsx';
+import { Translate, useI18n } from '../i18n.jsx';
 
 export function ThreeView() {
+  const { locale } = useI18n();
   const s = useStore();
   const m = store.mat();
   const t = m.t;
@@ -19,7 +21,9 @@ export function ThreeView() {
   const tplName = (TPLS.find(x => x.id === s.tpl) || TPLS[0]).name;
   const finCount = f => s.layers.filter(l => l.finish === f).length;
   const embCount = dir => s.layers.filter(l => l.finish === 'emboss' && embDirOf(l, s.embDir) === dir).length;
-  const finSummary = '工艺图层：烫金×' + (finCount('foil') + finCount('silver')) + ' · UV×' + finCount('uv') + ' · 亮面×' + finCount('gloss') + ' · 镭射×' + finCount('holo') + ' · 凸×' + embCount('up') + ' · 凹×' + embCount('down') + '（来自设计页）';
+  const finSummary = locale === 'en'
+    ? `Finish layers: Foil ×${finCount('foil') + finCount('silver')} · UV ×${finCount('uv')} · Gloss ×${finCount('gloss')} · Holographic ×${finCount('holo')} · Emboss ×${embCount('up')} · Deboss ×${embCount('down')} (from Design)`
+    : '工艺图层：烫金×' + (finCount('foil') + finCount('silver')) + ' · UV×' + finCount('uv') + ' · 亮面×' + finCount('gloss') + ' · 镭射×' + finCount('holo') + ' · 凸×' + embCount('up') + ' · 凹×' + embCount('down') + '（来自设计页）';
   // 烘焙输入：整版包围盒 + 全部图层（图集覆盖所有面板，图层放在哪 3D 就显示在哪）
   const preview = boxPreviewContextOf(s, m);
   const coverKey = JSON.stringify({
@@ -54,12 +58,12 @@ export function ThreeView() {
   useEffect(() => { window.__threeEngine = engRef.current; return () => { if (window.__threeEngine === engRef.current) window.__threeEngine = null; }; }, []);
   const applyScenePreset = id => { store.set(rigToStorePatch(scenePreset(id))); };
 
-  return (<>
+  return (<Translate>
     <div style={{ width: 246, flex: 'none', background: '#faf7f0', borderRight: '1px solid #ded5c4', overflowY: 'auto' }}>
       <Block>
         <ST>当前盒型</ST>
         <div style={{ background: '#f0ebe0', border: '1px solid #e2dac9', borderRadius: 6, padding: '9px 11px', fontSize: 11.5, lineHeight: 1.6, color: '#3d3830', fontFamily: "'JetBrains Mono',monospace" }}>
-          {tplName} · {m.name} t={t}<br />内尺寸 {s.L} × {s.W} × {s.H}
+          {tplName} · {m.name} t={t}<br />{locale === 'en' ? 'Inner dimensions ' : '内尺寸 '}{s.L} × {s.W} × {s.H}
         </div>
         <div style={{ fontSize: 10.5, color: '#8a8071', marginTop: 6 }}>尺寸与纸厚沿用「结构」页设置</div>
         <div style={{ fontSize: 10.5, color: '#9a5b1f', marginTop: 4 }}>{finSummary}</div>
@@ -71,7 +75,7 @@ export function ThreeView() {
         </div>
         <input type="range" min="0" max="100" value={s.fold} onPointerDown={stopFold} onKeyDown={stopFold} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { stopFold(); store.set({ fold: v }); } }} style={{ width: '100%', accentColor: '#9a5b1f', margin: '0 0 10px' }} />
         <div style={{ display: 'flex', gap: 7 }}>
-          <button onClick={playFold} style={{ ...btnSt, flex: 1, padding: '7px 0', border: 'none', fontWeight: 700, background: '#9a5b1f', color: '#fff' }}>▶ 播放折叠</button>
+          <button onClick={playFold} style={{ ...btnSt, flex: 1, padding: '7px 0', border: 'none', fontWeight: 700, background: '#9a5b1f', color: '#fff' }}>{locale === 'en' ? '▶ Play Fold' : '▶ 播放折叠'}</button>
           <button onClick={() => { stopFold(); store.set({ fold: 0 }); }} style={{ ...btnSt, flex: 1, padding: '7px 0', color: '#5c554a' }}>展开</button>
         </div>
       </Block>
@@ -89,7 +93,7 @@ export function ThreeView() {
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: '#8a8071', marginBottom: 3 }}><span>{row[0]}</span><span style={{ fontFamily: "'JetBrains Mono',monospace", color: '#9a5b1f' }}>{row[1] === 'grainScale' ? row[4] + 'mm' : row[4] + '%'}</span></div>
           <input aria-label={row[0]} type="range" min={row[2]} max={row[3]} value={row[4]} onChange={e => store.set({ [row[1]]: row[1] === 'grainScale' ? +e.target.value : +e.target.value / 100 })} style={{ width: '100%', accentColor: '#9a5b1f', margin: 0 }} />
         </div>)}
-        <div style={{ fontSize: 10.5, color: '#a59a85', lineHeight: 1.55, marginTop: 8 }}>仅改变 3D 外观，不改变「结构」页纸厚与刀版补偿。</div>
+        <div style={{ fontSize: 10.5, color: '#a59a85', lineHeight: 1.55, marginTop: 8 }}>{locale === 'en' ? 'Affects only the 3D appearance, not board thickness or dieline compensation on the Structure tab.' : '仅改变 3D 外观，不改变「结构」页纸厚与刀版补偿。'}</div>
       </Block>
       <Block>
         <ST style={{ marginBottom: 6 }}>工艺样例 · 检查</ST>
@@ -102,7 +106,7 @@ export function ThreeView() {
         <Range label="镭射色彩跨度" value={s.holoSpan3d} min={0} max={1} step={0.01} onChange={v => store.set({ holoSpan3d: v })} />
         <Range label="镭射彩虹底纹" value={s.holoRainbow3d} min={0} max={1} step={0.01} onChange={v => store.set({ holoRainbow3d: v })} />
         <ColorRow label="镭射底色（素面=银白，改色=彩色镭射箔）" value={s.holoColor3d} onChange={v => store.set({ holoColor3d: v })} />
-        <div style={{ marginTop: 4, fontSize: 10, color: '#a59a85' }}>镭射（幻彩）作用于镭射图层与箔层；随视角变化的彩虹干涉色。跨度越大色相扫掠越宽；彩虹底纹把全色谱渐变烘进纸面（素面镭射卡纸效果）。</div>
+        <div style={{ marginTop: 4, fontSize: 10, color: '#a59a85' }}>{locale === 'en' ? 'Holographic iridescence affects holographic and foil layers, producing view-dependent rainbow colors. A wider color range sweeps across more hues; the rainbow pattern bakes a full-spectrum gradient into the paper for an unprinted holographic-card effect.' : '镭射（幻彩）作用于镭射图层与箔层；随视角变化的彩虹干涉色。跨度越大色相扫掠越宽；彩虹底纹把全色谱渐变烘进纸面（素面镭射卡纸效果）。'}</div>
         <ToggleRow label="自动旋转" on={s.spin} onClick={() => store.set(st => ({ spin: !st.spin }))} />
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 10.5, color: '#8a8071', marginBottom: 3 }}>检查模式</div>
@@ -132,14 +136,14 @@ export function ThreeView() {
         <select value={s.stage3d} onChange={e => store.set({ stage3d: e.target.value })} style={{ ...selectSt, marginBottom: 8 }}>
           {STAGES.map(st => <option key={st.id} value={st.id}>{st.name}</option>)}
         </select>
-        <div style={{ fontSize: 10.5, color: '#a59a85', lineHeight: 1.6 }}>影棚效果用于快速校样；地面场景可独立切换。技术参数仅在开发测试入口显示。</div>
+        <div style={{ fontSize: 10.5, color: '#a59a85', lineHeight: 1.6 }}>{locale === 'en' ? 'Studio lighting is for quick previews; ground scenes can be changed independently. Technical settings are available only in the developer test entry.' : '影棚效果用于快速校样；地面场景可独立切换。技术参数仅在开发测试入口显示。'}</div>
       </Block>
       <Block>
         <ST>压纹参数</ST>
-        <div style={{ fontSize: 10.5, color: '#8a8071', lineHeight: 1.6, marginBottom: 7 }}>下列方向仅作旧图层无 embDir 时的回退；新图层请在「设计」页单独设置。</div>
+        <div style={{ fontSize: 10.5, color: '#8a8071', lineHeight: 1.6, marginBottom: 7 }}>{locale === 'en' ? 'These directions are fallbacks for older layers without embDir. Set the direction for new layers individually on the Design tab.' : '下列方向仅作旧图层无 embDir 时的回退；新图层请在「设计」页单独设置。'}</div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 9 }}>
-          <button onClick={() => store.set({ embDir: 'up' })} style={{ ...btnSt, flex: 1, background: s.embDir === 'up' ? '#9a5b1f' : '#fff', color: s.embDir === 'up' ? '#fff' : '#5c554a' }}>击凸 ▲</button>
-          <button onClick={() => store.set({ embDir: 'down' })} style={{ ...btnSt, flex: 1, background: s.embDir === 'down' ? '#9a5b1f' : '#fff', color: s.embDir === 'down' ? '#fff' : '#5c554a' }}>击凹 ▼</button>
+          <button onClick={() => store.set({ embDir: 'up' })} style={{ ...btnSt, flex: 1, background: s.embDir === 'up' ? '#9a5b1f' : '#fff', color: s.embDir === 'up' ? '#fff' : '#5c554a' }}>{locale === 'en' ? 'Emboss ▲' : '击凸 ▲'}</button>
+          <button onClick={() => store.set({ embDir: 'down' })} style={{ ...btnSt, flex: 1, background: s.embDir === 'down' ? '#9a5b1f' : '#fff', color: s.embDir === 'down' ? '#fff' : '#5c554a' }}>{locale === 'en' ? 'Deboss ▼' : '击凹 ▼'}</button>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
           <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: '#8a8071', marginBottom: 3 }}>深度 mm</div><input type="number" step="0.05" min="0.05" max="1.5" value={s.embDepth} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) store.set({ embDepth: Math.min(1.5, Math.max(0.05, Math.round(v * 100) / 100)) }); }} style={inputSt} /></div>
@@ -151,16 +155,16 @@ export function ThreeView() {
         <Range label="细节锐度" value={s.embSharpness3d} min={0} max={1} step={0.05} onChange={v => store.set({ embSharpness3d: v })} />
         <Range label="法线细节" value={s.embNormalStrength3d} min={0} max={3} step={0.05} onChange={v => store.set({ embNormalStrength3d: v })} />
         <Range label="几何位移" value={s.embDisplacementStrength3d} min={0} max={2} step={0.05} onChange={v => store.set({ embDisplacementStrength3d: v })} />
-        <div style={{ marginTop: 9, fontSize: 10.5, lineHeight: 1.6, color: '#a59a85' }}>细密压纹建议：锐度 0.8–1、法线 1–2、位移 0–0.4；卡纸深度通常 0.15–0.4mm。生产分版保持原图，不受这些 3D 参数影响。</div>
+        <div style={{ marginTop: 9, fontSize: 10.5, lineHeight: 1.6, color: '#a59a85' }}>{locale === 'en' ? 'For fine embossing, try sharpness 0.8–1, normal strength 1–2, and displacement 0–0.4. Typical paperboard depth is 0.15–0.4 mm. Production separations use the original artwork and are unaffected by these 3D settings.' : '细密压纹建议：锐度 0.8–1、法线 1–2、位移 0–0.4；卡纸深度通常 0.15–0.4mm。生产分版保持原图，不受这些 3D 参数影响。'}</div>
       </Block>
       <div style={{ padding: 14 }}>
-        <Note><b style={{ color: '#211d18' }}>UV 映射</b>　展开图与 3D 一比一映射；棋盘格 20mm/格，用于检查贴图密度与拉伸。工艺贴图按设计页图层位置烘焙。</Note>
+        <Note><b style={{ color: '#211d18' }}>UV Mapping</b>　{locale === 'en' ? 'The flat dieline maps 1:1 to the 3D model. The 20 mm checker helps inspect texture density and stretching. Finish maps are baked from layer positions on the Design tab.' : '展开图与 3D 一比一映射；棋盘格 20mm/格，用于检查贴图密度与拉伸。工艺贴图按设计页图层位置烘焙。'}</Note>
       </div>
     </div>
 
     <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 38%, #efe9db 0%, #ddd4c0 65%, #cfc4ab 100%)' }}>
-      <BoxPreview s={s} m={m} context={preview} fitFold={foldPlaying} engineRef={engRef} />
+      <BoxPreview s={s} m={m} context={preview} fitFold={foldPlaying} engineRef={engRef} locale={locale} />
       <div style={{ position: 'absolute', left: 12, bottom: 12, background: 'rgba(250,247,240,0.92)', border: '1px solid #ded5c4', borderRadius: 6, padding: '6px 12px', fontSize: 11, color: '#5c554a', whiteSpace: 'nowrap' }} title="左上选择模式后左键拖拽；滚轮缩放；双击适配">滚轮缩放 · 双击适配</div>
     </div>
-  </>);
+  </Translate>);
 }
