@@ -70,7 +70,7 @@ The site at <https://yuyou-dev.github.io/OpenBox3D/> is built from this repo by 
 
 ## Using the workbench
 
-Choose **English** or **简体中文** from the language menu in the top bar. Your choice is saved in this browser.
+The workbench starts in **English**. Choose **简体中文** from the language menu in the top bar to switch languages; your choice is saved in this browser.
 
 The top bar switches between four workspaces:
 

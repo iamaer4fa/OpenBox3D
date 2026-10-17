@@ -311,9 +311,9 @@ const translations = {
 const LocaleContext = createContext(null);
 
 export function I18nProvider({ children }) {
-  const [locale, setLocale] = useState(() => localStorage.getItem('openbox3d-locale') || 'zh');
+  const [locale, setLocale] = useState(() => localStorage.getItem('openbox3d-locale-v2') || 'en');
   useEffect(() => {
-    localStorage.setItem('openbox3d-locale', locale);
+    localStorage.setItem('openbox3d-locale-v2', locale);
     document.documentElement.lang = locale === 'en' ? 'en' : 'zh-CN';
     document.title = locale === 'en' ? 'OpenBox3D Workbench' : '苏哇工作台 · OpenBox3D';
   }, [locale]);
