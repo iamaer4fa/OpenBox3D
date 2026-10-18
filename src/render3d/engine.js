@@ -46,7 +46,7 @@ export class BoxEngine {
     if (!this.ready) return;
     const p = this.props;
     if (prev.locale !== p.locale) this.updateLanguage();
-    if (prev.l !== p.l || prev.w !== p.w || prev.h !== p.h || prev.t !== p.t || prev.tpl !== p.tpl || prev.glue !== p.glue || prev.sbbKey !== p.sbbKey) {
+    if (prev.l !== p.l || prev.w !== p.w || prev.h !== p.h || prev.t !== p.t || prev.tpl !== p.tpl || prev.glue !== p.glue || prev.corrFactor !== p.corrFactor || prev.flap !== p.flap || prev.matId !== p.matId || prev.sbbKey !== p.sbbKey) {
       clearTimeout(this._bt);
       this._bt = setTimeout(() => { if (this._disposed) return; this.build(); this.rebake(); this.applyFold(); this.frame(); }, 150);
     } else if (prev.bakeKey !== p.bakeKey) {
@@ -341,7 +341,7 @@ export class BoxEngine {
     this.folder = new Folder(T, sbb, (this.baked || {}).innerUV);
     this.folder.hasEmb = !!(this.props.embOn === '1' && (this.baked || this._lastBakeInput || {}).hasEmb !== false);
     this.folder._dims = this._dims;
-    this.pieces = makePieces(this.props.tpl || 'rte', L, W, H, t, this.num('glue', 14));
+    this.pieces = makePieces(this.props.tpl || 'rte', L, W, H, t, this.num('glue', 14), this.num('corrFactor', 3441), this.num('flap', 35), this.props.matId || 'fluteC');
     this.boxRoot = this.folder.build(this.pieces, t, this.faceMat, this.coreMat);
     this.scene.add(this.boxRoot);
     if (this.studio) {

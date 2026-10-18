@@ -2,7 +2,7 @@
 // 每面板标注 uvRect（2D 刀版坐标 mm）+ attach（2D 中与母板的相邻边），
 // buildNode 累计 rotZ（0/90/180/270），按规则自动求 flip——主体板零手工方向标定
 import * as THREE from 'three';
-import { discBbox } from '../dieline/templates.js';
+import { discBbox, corrugatedDigitsOf, corrugatedHeightOf } from '../dieline/templates.js';
 
 const deg = d => d * Math.PI / 180;
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -235,8 +235,41 @@ export class Folder {
 }
 
 // —— 盒型折叠树（与 2D gen* 共用尺寸公式；uv = 2D 刀版坐标矩形，attach = 2D 中挂于母板哪侧） ——
-export function makePieces(tpl, L, W, H, t, glue) {
+export function makePieces(tpl, L, W, H, t, glue, corrFactor = 3441, flap = 35, matId = 'fluteC') {
   const dh = Math.min(W * 0.75, 32), tk = Math.min(16, W * 0.55);
+  if (tpl === 'rsc' || tpl === 'hsc') {
+    const widths = corrugatedDigitsOf(corrFactor).map((offset, i) => (i % 2 === 0 ? L : W) + offset);
+    const bodyH = H + corrugatedHeightOf(matId, tpl);
+    const xs = [0];
+    widths.forEach(width => xs.push(xs[xs.length - 1] + width));
+    const makeWall = i => {
+      const kids = [];
+      if (tpl === 'rsc') {
+        kids.push({ edge: 'far', out: flap, uv: [xs[i], -flap, widths[i], flap], attach: 't', panelId: `slotted-flap-top-${i}`, surface: 'outside', up: 'top' });
+      }
+      kids.push({ edge: 'near', out: flap, uv: [xs[i], bodyH, widths[i], flap], attach: 'b', panelId: `slotted-flap-bottom-${i}`, surface: 'outside', up: 'top' });
+      if (i < 3) {
+        kids.push({
+          edge: i === 0 ? 'xmax' : 'far',
+          out: widths[i + 1],
+          uv: [xs[i + 1], 0, widths[i + 1], bodyH],
+          attach: i === 0 ? 'r' : 't',
+          panelId: `slotted-wall-${i + 1}`,
+          role: 'design',
+          surface: 'outside',
+          up: 'top',
+          kids: makeWall(i + 1)
+        });
+      }
+      return kids;
+    };
+    const wallTree = {
+      lx: widths[0], ly: bodyH, uv: [xs[0], 0, widths[0], bodyH],
+      panelId: 'slotted-wall-0', role: 'hero', surface: 'outside', up: 'top',
+      kids: [...makeWall(0), { edge: 'xmin', out: glue, shape: 'glue', uv: [-glue, 0, glue, bodyH], attach: 'l' }]
+    };
+    return [{ tree: wallTree, sign: -1, lift: flap, off: [0, 0], stand: true }];
+  }
   if (tpl === 'rte' || tpl === 'ste') {
     const bh = H + t, lidH = W + t;
     const xs1 = W + t, xs2 = W + t + L + t, xs3 = xs2 + W + t;

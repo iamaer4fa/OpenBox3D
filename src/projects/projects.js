@@ -6,7 +6,7 @@ import { asset } from '../asset.js';
 export const PROJECT_SCHEMA = 'box3d-project';
 export const PROJECT_VERSION = 1;
 
-const BOX_FIELDS = ['tpl', 'L', 'W', 'H', 'matId', 'bleed', 'glue', 'ovr', 'typeOvr'];
+const BOX_FIELDS = ['tpl', 'L', 'W', 'H', 'matId', 'bleed', 'glue', 'corrFactor', 'flap', 'ovr', 'typeOvr'];
 const copyFields = (src, fields) => Object.fromEntries(fields.map(k => [k, structuredClone(src[k])]));
 const cleanLayer = layer => {
   const out = { ...layer };
@@ -65,6 +65,8 @@ export async function projectStateOf(raw, view = 'design') {
   }));
   return {
     ...copyFields(doc.box, BOX_FIELDS),
+    corrFactor: Number.isFinite(doc.box.corrFactor) ? Math.max(0, Math.min(9999, Math.floor(doc.box.corrFactor))) : 3441,
+    flap: Number.isFinite(doc.box.flap) ? Math.max(1, Math.min(600, doc.box.flap)) : 35,
     layers,
     seq: doc.design.seq,
     ...materialToStorePatch(doc.appearance && doc.appearance.material),

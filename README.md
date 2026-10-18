@@ -18,7 +18,8 @@
 
 ## Features
 
-- **Parametric dielines** — 7 box templates (tuck-end, mailer, tray/lid, drawer, sleeve, tube…), all dimensions in millimetres with paper-thickness compensation, bleed and safe-area guides, plus manual node/edge editing stored as replayable overrides.
+- **Parametric dielines** — 9 box templates, including Regular Slotted (RSC) and Half Slotted (HSC) corrugated containers, all dimensions in millimetres with paper-thickness compensation, bleed and safe-area guides, plus manual node/edge editing stored as replayable overrides.
+- **Corrugated board options** — B-, C- and CB-flute (double-wall) stocks. RSC/HSC panel factors default to 2330, 3441 and 7885 respectively; their four digits add millimetres to the L/W/L/W panels. Flute- and style-specific body-height allowances are applied automatically, and flap depth defaults to an editable 35 mm.
 - **Layered design canvas** — text, image and shape layers bound to panels, with alignment, rotation, opacity, 300-dpi warnings, and per-layer **print finish channels**: foil (gold/silver), spot UV, gloss, holographic/iridescent, emboss/deboss.
 - **Real-time PBR 3D preview** — three.js `MeshPhysicalMaterial` with baked albedo / normal / roughness / metalness / clearcoat / displacement channels. Watch the flat sheet fold into the finished box; paper grain, lamination film, foil and embossing stack naturally in one material.
 - **Studio & materials** — 8 built-in studio scenes (HDRI + light rigs), 7 CC0 PBR ground stages, and paper/film presets with grain, roughness, gloss and emboss controls.
@@ -74,7 +75,7 @@ The workbench starts in **English**. Choose **简体中文** from the language m
 
 The top bar switches between four workspaces:
 
-1. **结构 Structure** — pick a box template, set inner dimensions (L×W×H mm), board stock and bleed; edit dieline nodes and line types (cut/crease) directly.
+1. **结构 Structure** — pick a box template, set inner dimensions (L×W×H mm), board stock and bleed; for RSC/HSC, edit the four-digit board factor and flap depth; edit dieline nodes and line types (cut/crease) directly.
 2. **设计 Design** — add text / image / shape layers onto the unfolded sheet; assign print finishes; watch cross-crease, safe-area and dpi warnings. Every edit is undoable — 上一步/下一步 buttons or ⌘Z / ⌘⇧Z (Ctrl+Z / Ctrl+Shift+Z).
 3. **3D** — fold animation, paper & film materials, finish toggles, studio/ground scenes, inspection modes (foil plate, UV plate, emboss height, UV checker).
 4. **输出 Output** — preflight summary, then export the print PDF (CMYK production / professional / RGB review) and finish separation PDFs.
@@ -137,6 +138,7 @@ Handy during development: `?view=structure|design|three|output`, `?tpl=rte|ste|m
 
 - **安装运行**：Node.js ≥ 18，`npm install && npm run dev`，打开 <http://127.0.0.1:26847>，首屏即内置示例盒（3D 闭合态），直接开始 DIY。也可直接体验 **[在线 Demo](https://yuyou-dev.github.io/OpenBox3D/)**（纯前端静态托管，GitHub Actions 自动部署）。
 - **工程文件**：顶栏「导出工程 / 导入工程」保存与分享 `.boxproj` 本地文件；「重置示例盒」恢复初始状态。
+- **瓦楞纸箱**：支持 C/B/CB（双瓦楞）楞型及 RSC/HSC 结构；因子默认分别为 3441/2330/7885，按 L/W/L/W 四面逐位补偿毫米数，摇盖深度默认为可编辑的 35 mm。
 - **替换示例盒**：在工作台设计好盒子 → 顶栏「导出工程」→ `npm run preset:from -- /路径/工程.boxproj`（图片抽取到 `public/preset/`，工程写入 `src/preset/preset-box.json`）。
 - **开源边界**：本开源版不含 AI 生图、AR/iOS 预览、DXF 导出与实验性的材质和环境实验室。
 - 开发服务器仅绑定 `127.0.0.1`（局域网不可达），属刻意安全基线。

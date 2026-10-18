@@ -9,12 +9,25 @@ export const MATS = [
   { id: 'kraft350', name: '牛皮纸 350g', t: 0.42, bleed: 3, note: '素面环保' },
   { id: 'fluteF', name: 'F 楞微瓦', t: 0.8, bleed: 5, note: '精品瓦楞' },
   { id: 'fluteE', name: 'E 楞瓦楞', t: 1.5, bleed: 5, note: '飞机盒常用' },
-  { id: 'fluteB', name: 'B 楞瓦楞', t: 3.0, bleed: 5, note: '电商外箱' }
+  { id: 'fluteB', name: 'B 楞瓦楞', t: 3.0, bleed: 5, note: '电商外箱', corrFactor: 2330, rscHeight: 6, hscHeight: 4 },
+  { id: 'fluteC', name: 'C 楞瓦楞', t: 4.0, bleed: 5, note: '运输外箱', corrFactor: 3441, rscHeight: 8, hscHeight: 6 },
+  { id: 'fluteCB', name: 'CB 双瓦楞', t: 7.0, bleed: 5, note: '重型外箱', corrFactor: 7885, rscHeight: 16, hscHeight: 8 }
 ];
+
+export const CORRUGATED_MATS = MATS.filter(m => m.corrFactor != null);
+export const DEFAULT_CORRUGATED_MAT = MATS.find(m => m.id === 'fluteC');
+export const corrugatedMatOf = id => CORRUGATED_MATS.find(m => m.id === id) || DEFAULT_CORRUGATED_MAT;
+export const corrugatedHeightOf = (matId, tpl) => {
+  const mat = corrugatedMatOf(matId);
+  return tpl === 'hsc' ? mat.hscHeight : mat.rscHeight;
+};
+export const corrugatedDigitsOf = factor => String(Math.max(0, Math.min(9999, Math.floor(Number(factor) || 0)))).padStart(4, '0').slice(-4).split('').map(Number);
 
 export const TPLS = [
   { id: 'rte', code: 'RTE', name: '反插盒', sub: '折叠纸盒' },
   { id: 'ste', code: 'STE', name: '直插盒', sub: '折叠纸盒' },
+  { id: 'rsc', code: 'RSC', name: '标准开槽箱', sub: 'Regular Slotted Container' },
+  { id: 'hsc', code: 'HSC', name: '半开槽箱', sub: 'Half Slotted Container' },
   { id: 'mailer', code: 'MLR', name: '飞机盒', sub: '瓦楞 · 免胶' },
   { id: 'lidbase', code: 'TDG', name: '天地盖', sub: '两片式' },
   { id: 'drawer', code: 'DRW', name: '抽屉盒', sub: '内盒 + 套筒' },
@@ -143,6 +156,46 @@ export function genMailer(c, s, t) {
   c.dimH(0, Lc, -tk - 7, '' + c.fmt(Lc));
   c.dimH(-Sw, Lc + Sw, y4 + 10, '' + c.fmt(Lc + 2 * Sw));
   c.dimV(-tk, y4, Lc + Sw + 8, '' + c.fmt(y4 + tk));
+}
+
+export function genSlottedContainer(c, s, halfSlot) {
+  const widths = corrugatedDigitsOf(s.corrFactor).map((offset, i) => (i % 2 === 0 ? s.L : s.W) + offset);
+  const bodyH = s.H + corrugatedHeightOf(s.matId, halfSlot ? 'hsc' : 'rsc');
+  const xs = [0];
+  widths.forEach(width => xs.push(xs[xs.length - 1] + width));
+  const topFlaps = halfSlot ? [] : [-1];
+  const ends = [...topFlaps, 1];
+  const names = ['正面', '侧面', '背面', '侧面'];
+
+  for (let i = 0; i < widths.length; i++) {
+    const pts = c.rect(xs[i], 0, widths[i], bodyH);
+    c.fill(pts);
+    c.region(pts, { panelId: `slotted-wall-${i}`, role: i === 0 ? 'hero' : 'design', surface: 'outside', up: 'top' });
+    c.label(xs[i] + widths[i] / 2, bodyH / 2, names[i]);
+    c.safeR(xs[i], 0, widths[i], bodyH);
+  }
+
+  const glue = s.glue;
+  const gluePts = [[0, 0], [-glue, 5], [-glue, bodyH - 5], [0, bodyH]];
+  c.fill(gluePts); c.cut(gluePts); c.label(-glue / 2, bodyH / 2, '糊口', 2.8);
+  c.crease([[0, 0], [0, bodyH]]);
+  c.cut([[xs[4], 0], [xs[4], bodyH]]);
+  for (let i = 1; i < 4; i++) c.crease([[xs[i], 0], [xs[i], bodyH]]);
+
+  for (const end of ends) {
+    const y = end < 0 ? 0 : bodyH, flapY = y + end * s.flap;
+    c.crease([[0, y], [xs[4], y]]);
+    c.cut([[0, flapY], [xs[4], flapY]]);
+    for (let i = 0; i < widths.length; i++) {
+      const flap = c.rect(xs[i], Math.min(y, flapY), widths[i], s.flap);
+      c.fill(flap);
+      c.region(flap, { panelId: `slotted-flap-${end < 0 ? 'top' : 'bottom'}-${i}`, surface: 'outside', up: 'top' });
+    }
+    for (let i = 0; i <= 4; i++) c.cut([[xs[i], y], [xs[i], flapY]]);
+  }
+
+  c.dimH(-glue, xs[4], bodyH + (ends.includes(1) ? s.flap : 0) + 9, '' + c.fmt(xs[4] + glue));
+  c.dimV(0, bodyH, xs[4] + 8, '' + c.fmt(bodyH));
 }
 
 // 托盘（天地盖底/盖、抽屉盒内盒共用）

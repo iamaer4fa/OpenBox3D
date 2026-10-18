@@ -1,12 +1,12 @@
 // 几何求值：刀版几何是全系统唯一权威数据。
 // 2D 视图、3D 网格、PDF 导出全部由本函数派生；按参数 key 缓存。
 // 手动编辑存为覆盖指令流（ovr 节点位移、typeOvr 线型切换），在模板求值结果上重放。
-import { genTuck, genMailer, genTray, genSleeve, genTube } from './templates.js';
+import { genTuck, genMailer, genSlottedContainer, genTray, genSleeve, genTube } from './templates.js';
 
 let _key = null, _val = null;
 
 export function geomOf(s, t) {
-  const key = [s.tpl, s.L, s.W, s.H, t, s.bleed, s.glue].join('|') + '|' + JSON.stringify(s.ovr || {}) + JSON.stringify(s.typeOvr || {});
+  const key = [s.tpl, s.L, s.W, s.H, t, s.bleed, s.glue, s.matId, s.corrFactor, s.flap].join('|') + '|' + JSON.stringify(s.ovr || {}) + JSON.stringify(s.typeOvr || {});
   if (_key === key) return _val;
   const r2 = v => Math.round(v * 100) / 100;
   const o = { segs: [], fills: [], panels: [], safes: [], labels: [], dims: [], arcRuns: [], sbb: [1e9, 1e9, -1e9, -1e9], vbb: [1e9, 1e9, -1e9, -1e9] };
@@ -34,6 +34,7 @@ export function geomOf(s, t) {
   const ctx = { cut, crease, fill, panel, region, safeR, label, dimH, dimV, q, rect, fmt };
 
   if (s.tpl === 'rte' || s.tpl === 'ste') genTuck(ctx, s, t, s.tpl === 'rte');
+  else if (s.tpl === 'rsc' || s.tpl === 'hsc') genSlottedContainer(ctx, s, s.tpl === 'hsc');
   else if (s.tpl === 'mailer') genMailer(ctx, s, t);
   else if (s.tpl === 'cyl') genTube(ctx, s, t, 24, Math.PI * s.L / 24);
   else if (s.tpl === 'hex') genTube(ctx, s, t, 6, s.W);

@@ -9,6 +9,8 @@ import { makePieces } from '../src/render3d/fold.js';
 const CONTRACTS = {
   rte:     { pieces: 1, main: 6, accessory: 6, glue: 1, panels: 6, asm: [] },
   ste:     { pieces: 1, main: 6, accessory: 6, glue: 1, panels: 6, asm: [] },
+  rsc:     { pieces: 1, main: 12, accessory: 0, glue: 1, panels: 12, asm: [] },
+  hsc:     { pieces: 1, main: 8, accessory: 0, glue: 1, panels: 8, asm: [] },
   mailer:  { pieces: 1, main: 6, accessory: 5, glue: 0, panels: 6, asm: [] },
   lidbase: { pieces: 2, main: 10, accessory: 8, glue: 0, panels: 10, asm: ['lid'] },
   drawer:  { pieces: 2, main: 9, accessory: 4, glue: 1, panels: 9, asm: ['drawer'] },
@@ -34,9 +36,9 @@ assert.deepEqual(Object.keys(CONTRACTS).sort(), ids, 'TPLS 与 3D 同步契约�
 
 for (const c of CASES) {
   for (const tpl of ids) {
-    const state = { tpl, L: c.L, W: c.W, H: c.H, bleed: 3, glue: c.glue, ovr: {}, typeOvr: {} };
+    const state = { tpl, L: c.L, W: c.W, H: c.H, matId: 'fluteC', corrFactor: 3441, flap: 35, bleed: 3, glue: c.glue, ovr: {}, typeOvr: {} };
     const geom = geomOf(state, c.t);
-    const pieces = makePieces(tpl, c.L, c.W, c.H, c.t, c.glue);
+    const pieces = makePieces(tpl, c.L, c.W, c.H, c.t, c.glue, state.corrFactor, state.flap, state.matId);
     const nodes = pieces.flatMap(p => flatten(p.tree));
     const contract = CONTRACTS[tpl];
     const counts = { main: 0, accessory: 0, glue: 0 };
@@ -93,6 +95,32 @@ for (const c of CASES) {
     }
   }
 }
+
+for (const [matId, factor, rscHeight, hscHeight, thickness] of [
+  ['fluteC', 3441, 8, 6, 4],
+  ['fluteB', 2330, 6, 4, 3],
+  ['fluteCB', 7885, 16, 8, 7]
+]) {
+  for (const [tpl, heightAllowance] of [['rsc', rscHeight], ['hsc', hscHeight]]) {
+    const state = { tpl, L: 500, W: 320, H: 200, matId, corrFactor: factor, flap: 35, bleed: 5, glue: 14, ovr: {}, typeOvr: {} };
+    const geom = geomOf(state, thickness);
+    const offsets = String(factor).split('').map(Number);
+    assert.deepEqual(geom.panels.slice(0, 4).map(panel => bboxOf(panel.pts)[2] - bboxOf(panel.pts)[0]), [500 + offsets[0], 320 + offsets[1], 500 + offsets[2], 320 + offsets[3]], `${tpl}/${matId} should apply the four factor digits to L/W/L/W`);
+    assert.equal(geom.panels[0].pts[2][1] - geom.panels[0].pts[1][1], 200 + heightAllowance, `${tpl}/${matId} should apply its flute height allowance`);
+    if (tpl === 'rsc') {
+      assert.ok(geom.fills.some(fill => bboxOf(fill)[1] === -35), 'RSC should use the default 35 mm flap');
+      assert.ok(geom.fills.some(fill => bboxOf(fill)[3] === 200 + heightAllowance + 35), 'RSC should have flaps at both ends');
+    } else {
+      assert.ok(geom.fills.some(fill => bboxOf(fill)[3] === 200 + heightAllowance + 35), 'HSC should use the default 35 mm flap');
+      assert.ok(!geom.fills.some(fill => bboxOf(fill)[1] < 0), 'HSC should leave one end open');
+    }
+  }
+}
+
+const editable = { tpl: 'hsc', L: 500, W: 320, H: 200, matId: 'fluteC', corrFactor: 1234, flap: 42, bleed: 5, glue: 14, ovr: {}, typeOvr: {} };
+const editableGeom = geomOf(editable, 4);
+assert.deepEqual(editableGeom.panels.slice(0, 4).map(panel => bboxOf(panel.pts)[2] - bboxOf(panel.pts)[0]), [501, 322, 503, 324], 'custom board factor must drive panel compensation');
+assert.ok(editableGeom.fills.some(fill => bboxOf(fill)[3] === 200 + 6 + 42), 'custom flap depth must drive HSC geometry');
 
 assert.throws(() => makePieces('__unknown__', 80, 40, 120, 0.45, 14), /未知盒型/, '未知盒型必须立即失败，禁止静默回退到其它折叠树');
 console.log(`结构/设计/3D 同步检查通过：${ids.length} 个盒型 × ${CASES.length} 组尺寸`);
